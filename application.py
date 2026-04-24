@@ -7,6 +7,7 @@ import subprocess
 import os
 from colorama import Style, Fore, init
 from flask import Flask, render_template, send_file, request, redirect, url_for, abort, render_template_string, send_from_directory
+from werkzeug.utils import secure_filename
 from pathlib import Path
 import sys
 
@@ -68,12 +69,10 @@ def uploaded():
             err = "No selected file"
             return render_template('error.html', err=err)
             #return f'{Fore.RED}[-] No selected file{Fore.RESET}'
-        file_name = file.filename
-        #Check si le fichier entré est bon (test pour répondre à CodeQL)
-        if ".." in file_name or "/" in file_name or "\\" in file_name:
+        file_name = secure_filename(file.filename)
+        if file_name == '':
             err = "Invalid filename"
             return render_template('error.html', err=err)
-            #raise ValueError(f"{Fore.RED}[-] Invalid filename : {file.filename}{Fore.RESET}")
         else:
             file_content = process_file(file_name)
             
@@ -83,16 +82,20 @@ def uploaded():
                 return render_template('error.html', err=err)
             else:
                 print(f"{Fore.GREEN}[+] file uploded ! {file_name}{Fore.RESET}")
-                path = f'{Path(__file__).parent}'
-                path_full_write = f"{path}\\files\{file_name}"
-                content = readfile(file_name)
+                base_dir = (Path(__file__).parent / "files").resolve()
+                safe_source_path = (base_dir / file_name).resolve()
+                if base_dir not in safe_source_path.parents and safe_source_path != base_dir:
+                    err = "Invalid filename"
+                    return render_template('error.html', err=err)
+                path_full_write = str(safe_source_path)
+                content = readfile(path_full_write)
                 writefile(path_full_write, content)
 
 
     return render_template('upload.html', file_content=file_content)
 
-def  readfile(file_name):
-    with open (file_name, "r") as fichier:
+def  readfile(full_path):
+    with open(full_path, "r") as fichier:
         content = fichier.read()
     return content
 
