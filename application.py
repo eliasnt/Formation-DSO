@@ -83,8 +83,15 @@ def uploaded():
                 return render_template('error.html', err=err)
             else:
                 print(f"{Fore.GREEN}[+] file uploded ! {file_name}{Fore.RESET}")
-                path = f'{Path(__file__).parent}'
-                path_full_write = f"{path}\\files\{file_name}"
+                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "files"))
+                safe_name = os.path.basename(file_name)
+                if not safe_name or safe_name != file_name:
+                    err = "Invalid filename"
+                    return render_template('error.html', err=err)
+                path_full_write = os.path.abspath(os.path.join(base_dir, safe_name))
+                if not path_full_write.startswith(base_dir + os.sep):
+                    err = "Invalid filename"
+                    return render_template('error.html', err=err)
                 content = readfile(file_name)
                 writefile(path_full_write, content)
 
@@ -98,7 +105,11 @@ def  readfile(file_name):
 
 
 def writefile(full_path, content):
-    with open(full_path, "w+") as fichier:
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "files"))
+    resolved_path = os.path.abspath(full_path)
+    if not resolved_path.startswith(base_dir + os.sep):
+        raise ValueError("Invalid destination path")
+    with open(resolved_path, "w+") as fichier:
         fichier.write(content)
 
 
