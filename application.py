@@ -161,8 +161,7 @@ def gen_reqtxt(directory):
 
 if __name__ == '__main__':
     #Récupère le path de l'application
-    app.run(host="0.0.0.0", port=5000)
     directory = f'{Path(__file__).parent}'
     print(directory)
     gen_reqtxt(directory)
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
