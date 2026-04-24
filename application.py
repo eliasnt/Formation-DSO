@@ -7,6 +7,7 @@ import subprocess
 import os
 from colorama import Style, Fore, init
 from flask import Flask, render_template, send_file, request, redirect, url_for, abort, render_template_string, send_from_directory
+from werkzeug.utils import secure_filename
 from pathlib import Path
 from werkzeug.utils import secure_filename
 import sys
@@ -40,9 +41,15 @@ def files():
 @app.route('/view')
 def view_file():
     filename = request.args.get('file')  # Paramètre `file` passé dans l'URL
+    if not filename:
+        abort(400, description="Missing file parameter")
+
     base_path = os.path.abspath('./files')  # Répertoire sécurisé
     requested_path = os.path.abspath(os.path.join(base_path, filename))
 
+    # Vérifie que le chemin demandé reste dans le répertoire autorisé
+    if os.path.commonpath([base_path, requested_path]) != base_path:
+        abort(403, description="Access denied")
 
     try:
         with open(requested_path, 'r') as file:
@@ -90,12 +97,20 @@ def uploaded():
                 print(f"{Fore.GREEN}[+] file uploded ! {file_name}{Fore.RESET}")
                 content = readfile(safe_input_path)
                 writefile(safe_input_path, content)
+                base_dir = (Path(__file__).parent / "files").resolve()
+                safe_source_path = (base_dir / file_name).resolve()
+                if base_dir not in safe_source_path.parents and safe_source_path != base_dir:
+                    err = "Invalid filename"
+                    return render_template('error.html', err=err)
+                path_full_write = str(safe_source_path)
+                content = readfile(path_full_write)
+                writefile(path_full_write, content)
 
 
     return render_template('upload.html', file_content=file_content)
 
-def  readfile(file_name):
-    with open (file_name, "r") as fichier:
+def  readfile(full_path):
+    with open(full_path, "r") as fichier:
         content = fichier.read()
     return content
 
@@ -165,8 +180,7 @@ def gen_reqtxt(directory):
 
 if __name__ == '__main__':
     #Récupère le path de l'application
-    app.run(host="0.0.0.0", port=5000)
     directory = f'{Path(__file__).parent}'
     print(directory)
     gen_reqtxt(directory)
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
