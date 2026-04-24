@@ -39,9 +39,15 @@ def files():
 @app.route('/view')
 def view_file():
     filename = request.args.get('file')  # Paramètre `file` passé dans l'URL
+    if not filename:
+        abort(400, description="Missing file parameter")
+
     base_path = os.path.abspath('./files')  # Répertoire sécurisé
     requested_path = os.path.abspath(os.path.join(base_path, filename))
 
+    # Vérifie que le chemin demandé reste dans le répertoire autorisé
+    if os.path.commonpath([base_path, requested_path]) != base_path:
+        abort(403, description="Access denied")
 
     try:
         with open(requested_path, 'r') as file:
